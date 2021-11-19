@@ -1,9 +1,9 @@
 package main
 
 import (
-	"./database"
-	"./routes"
-	"github.com/gofiber/fiber"
+	"github.com/HoseaTirtajaya/go-fundamental/database"
+	"github.com/HoseaTirtajaya/go-fundamental/routes"
+	"github.com/gofiber/fiber/v2"
 )
 
 func main() {
