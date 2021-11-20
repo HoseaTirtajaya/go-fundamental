@@ -7,5 +7,5 @@ import (
 
 func SetupRoute(app *fiber.App) {
 	app.Post("/api/v1/users/register", controllers.Register)
-
+	app.Post("/api/v1/users/login", controllers.Login)
 }
