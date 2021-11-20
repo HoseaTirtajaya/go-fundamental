@@ -2,11 +2,12 @@ package controllers
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/HoseaTirtajaya/go-fundamental/database"
 	"github.com/HoseaTirtajaya/go-fundamental/models"
-	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -62,8 +63,9 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
-		Issuer: strconv.Itoa(int(user.Id)),
-		// ExpiresAt: time.Duration(1) * time.Hour, // 1 day expire
+		Issuer:    strconv.Itoa(int(user.Id)),
+		IssuedAt:  time.Now().Unix(),
+		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(), // 1 day expire
 	})
 
 	token, err := claims.SignedString([]byte(SECRET_KEY))
@@ -75,7 +77,35 @@ func Login(c *fiber.Ctx) error {
 		})
 	}
 
+	cookie := fiber.Cookie{
+		Name:     "jwtoken",
+		Value:    token,
+		Expires:  time.Now().Add(time.Hour * 24),
+		HTTPOnly: true,
+	}
+
+	c.Cookie(&cookie)
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"token": token,
+		"message": "Success login!",
 	})
+}
+
+func ReadUser(c *fiber.Ctx) error {
+	cookie := c.Cookies("jwtoken")
+
+	token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(t *jwt.Token) (interface{}, error) {
+		return []byte(SECRET_KEY), nil
+	})
+
+	if err != nil {
+		c.Status(fiber.StatusUnauthorized)
+		return c.JSON(fiber.Map{
+			"message": "Authentication failed!",
+		})
+	}
+
+	claims := token.Claims
+
+	return c.Status(fiber.StatusOK).JSON(claims)
 }
