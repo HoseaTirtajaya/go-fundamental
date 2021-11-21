@@ -1,114 +1,55 @@
 package main
 
 import (
-	"encoding/json"
+	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/jinzhu/gorm"
+	"github.com/shopspring/decimal"
+	_ "gorm.io/driver/mysql"
 )
 
-//STRUCT BOOK
-type Book struct {
-	ID     string  `json:"id"`
-	Isbn   string  `json:"isbn"`
-	Title  string  `json:"title"`
-	Author *Author `json:"author"`
+var DB *gorm.DB
+
+//Initiate product as OOP of product
+type Product struct {
+	ID    int             `json:"id"`
+	Code  string          `json:"code"`
+	Name  string          `json:"name"`
+	Price decimal.Decimal `json:"price" sql:"type:decimal(16,2)"`
 }
 
-//STRUCT AUTHOR
-type Author struct {
-	FirstName string `json:"firstname"`
-	LastName  string `json:"lastname"`
-}
-
-//INIT BOOKS VAR AS A SLICE BOOK STRUCT
-var books []Book
-
-func getBooks(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(books)
-}
-
-func getBook(w http.ResponseWriter, r *http.Request) {
-	var isFound bool = false
-
-	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r) // Get Params ID from route
-
-	//loop thru books
-	for _, item := range books {
-		if item.ID == params["id"] {
-			isFound = true
-			json.NewEncoder(w).Encode(item)
-		}
-	}
-	if !isFound {
-		w.WriteHeader(http.StatusNotFound)
-		resp := make(map[string]string)
-		resp["message"] = "Book Not Found"
-		json.NewEncoder(w).Encode(resp)
-	}
-}
-
-func createBook(w http.ResponseWriter, r *http.Request) {
-	var book Book
-	_ = json.NewDecoder(r.Body).Decode(&book)
-	book.ID = strconv.Itoa(rand.Intn(1000000)) // Mock ID - Not Safe
-	books = append(books, book)
-	json.NewEncoder(w).Encode(book)
-}
-
-func updateBook(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r)
-
-	for index, item := range books {
-		if item.ID == params["id"] {
-			books = append(books[:index], books[index+1:]...)
-			var book Book
-			_ = json.NewDecoder(r.Body).Decode(&book)
-			book.ID = params["id"] // Mock ID - Not Safe
-			books = append(books, book)
-			json.NewEncoder(w).Encode(book)
-			return
-		}
-		json.NewEncoder(w).Encode(books)
-	}
-}
-
-func deleteBook(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r)
-
-	for index, item := range books {
-		if item.ID == params["id"] {
-			books = append(books[:index], books[index+1:]...)
-			break
-		}
-	}
-	json.NewEncoder(w).Encode(books)
+//response message to api
+type Response struct {
+	Code    int         `json:"status"`
+	Data    interface{} `json:"data"`
+	Message string      `json:"message"`
 }
 
 func main() {
-	r := mux.NewRouter()
+	db, err := gorm.Open("mysql", "root:@/db_go_test?charset=utf8&parseTime=True")
+	if err != nil {
+		log.Println("Connection failed! Restart the database", err)
+	} else {
+		log.Println("Connection Success!")
+	}
 
-	//MOCK DATA FOR BOOK
-	books = append(books, Book{ID: "1", Isbn: "10183023", Title: "BookOne", Author: &Author{
-		FirstName: "Jane", LastName: "Doe"},
-	})
-	books = append(books, Book{ID: "2", Isbn: "221513210", Title: "BookTwo", Author: &Author{
-		FirstName: "John", LastName: "Doe"},
-	})
+	db.AutoMigrate(&Product{})
+	HandleRequest()
+}
 
-	//Route Handlers
-	r.HandleFunc("/api/books", getBooks).Methods("GET")
-	r.HandleFunc("/api/books/{id}", getBook).Methods("GET")
-	r.HandleFunc("/api/books", createBook).Methods("POST")
-	r.HandleFunc("/api/books/{id}", updateBook).Methods("PUT")
-	r.HandleFunc("/api/books/{id}", deleteBook).Methods("DELETE")
+func HandleRequest() {
+	log.Println("Development server has started at http://localhost:8338")
 
-	log.Fatal(http.ListenAndServe(":8080", r)) //LOG FATAL IF FAILS RETURNS AN ERROR
+	myRouter := mux.NewRouter().StrictSlash(true)
+
+	myRouter.HandleFunc("/", Homepage)
+
+	log.Fatal(http.ListenAndServe(":8338", myRouter))
+}
+
+func Homepage(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Welcome to the web server!")
 }
