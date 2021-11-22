@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	todo "github.com/arganaphangquestian/gotodo"
+	todo "github.com/HoseaTirtajaya/go-fundamental"
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
@@ -64,5 +64,6 @@ func main() {
 	r.HandleFunc("/api/todo", todoService.createTodo).Methods("POST")
 	r.HandleFunc("/api/todo/{id}", todoService.updateTodo).Methods("PATCH")
 	r.HandleFunc("/api/todo/{id}", todoService.deleteTodo).Methods("DELETE")
+
 	http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", APPLICATION_PORT), r)
 }
