@@ -61,9 +61,9 @@ func main() {
 
 	r.HandleFunc("/api/todo", todoService.GetTodos).Methods("GET")
 	r.HandleFunc("/api/todo/{id}", todoService.GetTodo).Methods("GET")
-	r.HandleFunc("/api/todo", todoService.createTodo).Methods("POST")
-	r.HandleFunc("/api/todo/{id}", todoService.updateTodo).Methods("PATCH")
-	r.HandleFunc("/api/todo/{id}", todoService.deleteTodo).Methods("DELETE")
+	r.HandleFunc("/api/todo", todoService.CreateTodo).Methods("POST")
+	r.HandleFunc("/api/todo/{id}", todoService.UpdateTodo).Methods("PATCH")
+	r.HandleFunc("/api/todo/{id}", todoService.DeleteTodo).Methods("DELETE")
 
 	http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", APPLICATION_PORT), r)
 }

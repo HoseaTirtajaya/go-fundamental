@@ -76,23 +76,103 @@ func (t *TodoService) GetTodo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (t *TodoService) createTodo(w http.ResponseWriter, r *http.Request) {
+func (t *TodoService) CreateTodo(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var result Todo
+	err := decoder.Decode(&result)
+	if err != nil {
+		log.Println(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response{
+			Message: "Fail to create todo",
+			Data:    decoder,
+		})
+		return
+	}
+
+	_, err = t.DB.NamedExec(`INSERT INTO todos (title, done) VALUES (:title, :done)`, result)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response{
+			Message: "Failed to create todo!",
+		})
+		return
+	}
+
+	responseMap := []map[string]interface{}{
+		{"title": result.Title, "done": result.Done},
+	}
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response{
-		Message: "Hello create todo!",
+		Message: "Success",
+		Data:    responseMap,
 	})
 }
 
-func (t *TodoService) updateTodo(w http.ResponseWriter, r *http.Request) {
+func (t *TodoService) UpdateTodo(w http.ResponseWriter, r *http.Request) {
+	var result Todo
+	tempTodo := Todo{}
+	params := mux.Vars(r)
+	id, _ := strconv.Atoi(params["id"])
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&result)
+
+	if err != nil {
+		log.Println(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response{
+			Message: "Fail to create todo",
+			Data:    decoder,
+		})
+		return
+	}
+
+	err = t.DB.Get(&tempTodo, "SELECT * FROM todos where id = ?", id)
+
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(response{
+			Message: "todo not found!",
+		})
+	}
+
+	log.Println("data temp todo\t", tempTodo.ID)
+	log.Println("data body\t", result.Title, result.Done)
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response{
 		Message: "Hello update todo!",
 	})
 }
 
-func (t *TodoService) deleteTodo(w http.ResponseWriter, r *http.Request) {
+func (t *TodoService) DeleteTodo(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id, _ := strconv.Atoi(params["id"])
+
+	result := Todo{}
+	err := t.DB.Get(&result, "SELECT * FROM todos WHERE id = ?", id)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println(err.Error())
+		json.NewEncoder(w).Encode(response{
+			Message: fmt.Sprintf("Failed to delete todo with id %s", params["id"]),
+		})
+		return
+	}
+
+	_, err = t.DB.Queryx("DELETE FROM todos WHERE id = ?", params["id"])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response{
+			Message: "Failed to delete todo",
+		})
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response{
-		Message: "Hello delete todo!",
+		Message: fmt.Sprintf("Success delete todo with id %s", params["id"]),
 	})
 }
