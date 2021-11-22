@@ -3,6 +3,7 @@ package todo
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -119,12 +120,21 @@ func (t *TodoService) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&result)
 
-	if err != nil {
+	switch {
+	case err == io.EOF:
+		// empty body
 		log.Println(err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response{
 			Message: "Fail to create todo",
-			Data:    decoder,
+		})
+		return
+	case err != nil:
+		log.Println(err.Error())
+		// other error
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response{
+			Message: "Fail to create todo",
 		})
 		return
 	}
@@ -136,14 +146,25 @@ func (t *TodoService) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response{
 			Message: "todo not found!",
 		})
+		return
 	}
 
-	log.Println("data temp todo\t", tempTodo.ID)
-	log.Println("data body\t", result.Title, result.Done)
+	//Update must be like struct structure, if one wasn't given, it will be zero value assigned in request body
+	//UPDATE IS NOT COMPLETELY DONE
+
+	_, err = t.DB.Queryx(`UPDATE todos SET title = ?, done = ? WHERE id = ? `, result.Title, result.Done, id)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response{
+			Message: "Failed to update todo data",
+		})
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response{
-		Message: "Hello update todo!",
+		Message: "Successful update todo!",
 	})
 }
 
